@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Resume vs Job Description</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        async function submitForm(event) {
+            event.preventDefault();
+
+            const form = document.getElementById("upload-form");
+            const formData = new FormData(form);
+
+            const response = await fetch("/compare/", {
+                method: "POST",
+                body: formData
+            });
+
+            const result = await response.json();
+            document.getElementById("result").innerHTML = `
+                <div class="mt-4 p-4 bg-green-100 text-green-800 rounded-lg shadow">
+                    <p class="font-bold">Match Score: ${result.match_score}</p>
+                    <p>${result.message}</p>
+                </div>`;
+        }
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-6 text-center">Resume Match Checker</h2>
+        <form id="upload-form" onsubmit="submitForm(event)" enctype="multipart/form-data" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Upload Resume:</label>
+                <input type="file" name="resume" accept=".txt,.pdf,.docx" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Upload Job Description:</label>
+                <input type="file" name="job_description" accept=".txt,.pdf,.docx" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded">
+                Compare
+            </button>
+        </form>
+
+        <div id="result" class="mt-6 text-sm"></div>
+    </div>
+</body>
+</html>

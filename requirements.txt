@@ -3,3 +3,8 @@ PyPDF2
 python-docx
 python-dotenv
 tk
+fastapi
+uvicorn
+jinja2
+python-multipart
+pdfminer.six
