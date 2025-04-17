@@ -11,7 +11,7 @@ import re
 import datetime
 import csv
 
-# --- Configuration and Setup ---
+#  Configuration and Setup 
 load_dotenv()
 
 # Global variables
@@ -22,7 +22,7 @@ current_resume_data = None  # Store extracted resume data for reuse
 def initialize_api():
     """Initialize the Gemini API with proper error handling."""
     try:
-        # Check both environment variable names for the API key
+        # Check environment variable name for the API key
         gemini_api_key = os.getenv("GOOGLE_API_KEY")
         if not gemini_api_key:
             raise ValueError("API key not found in environment variables. Please set GOOGLE_API_KEY in your .env file.")
@@ -256,64 +256,6 @@ def analyze_resume_against_job(resume_data, job_description, model):
         print(f"Error calling Gemini API during analysis: {e}")
         return {"error": f"API call failed during analysis: {e}"}
 
-def optimize_resume(resume_data, job_description, model):
-    """Generate an optimized version of the resume for the specific job."""
-    if not resume_data or "error" in resume_data:
-        print("Cannot optimize resume due to missing or error in resume data.")
-        return {"error": "Cannot optimize resume due to issues with resume data."}
-    
-    if not job_description or not job_description.strip():
-        print("Cannot optimize resume due to empty job description.")
-        return {"error": "Job description is empty."}
-    
-    resume_json_string = json.dumps(resume_data, indent=2)
-    
-    prompt = f"""Based on the provided resume data and job description, create an optimized version of the resume.
-    
-    RESUME DATA:
-    {resume_json_string}
-    
-    JOB DESCRIPTION:
-    {job_description}
-    
-    Please rewrite and restructure the resume to better align with the job requirements. Focus on:
-    1. Highlighting relevant experience and skills that match the job
-    2. Reframing achievements to showcase transferable skills
-    3. Prioritizing information most relevant to this position
-    4. Using keywords from the job description naturally
-    
-    Return the optimized resume in the following JSON format:
-    {{
-      "summary": "Optimized professional summary",
-      "work_experience": [
-        {{
-          "title": "Job title",
-          "company": "Company name",
-          "dates": "Employment date range",
-          "responsibilities": ["Optimized responsibility 1", "Optimized responsibility 2", "..."]
-        }}
-      ],
-      "skills": ["Prioritized skill 1", "Prioritized skill 2", "..."],
-      "education": [Same as original but reordered if needed],
-      "certifications": [Same as original but reordered if needed]
-    }}
-    
-    Format the output as valid JSON with no additional text or explanation.
-    """
-    
-    try:
-        response = model.generate_content(prompt)
-        json_string = clean_json_string(response.text)
-        
-        try:
-            optimized_data = json.loads(json_string)
-            return optimized_data
-        except json.JSONDecodeError:
-            return {"error": "Failed to parse optimized resume data from API response.", "raw_response": response.text}
-    except Exception as e:
-        print(f"Error calling Gemini API during resume optimization: {e}")
-        return {"error": f"API call failed during resume optimization: {e}"}
-
 # --- File Processing ---
 def extract_resume_text_from_file(file_path):
     """Extract text from a resume file based on its file extension."""
@@ -379,59 +321,6 @@ def save_analysis_to_csv(analysis_data, resume_path, job_description):
         return csv_path
     except Exception as e:
         print(f"Error saving analysis to CSV: {e}")
-        return None
-
-def export_optimized_resume(optimized_data, original_resume_path):
-    """Export optimized resume to a TXT file."""
-    try:
-        # Create a directory for optimized resumes if it doesn't exist
-        save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "optimized_resumes")
-        os.makedirs(save_dir, exist_ok=True)
-        
-        # Create a timestamped filename
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        original_filename = os.path.basename(original_resume_path)
-        txt_filename = f"optimized_{timestamp}_{original_filename}.txt"
-        txt_path = os.path.join(save_dir, txt_filename)
-        
-        with open(txt_path, 'w', encoding='utf-8') as f:
-            f.write("# OPTIMIZED RESUME\n\n")
-            
-            # Summary
-            f.write("## PROFESSIONAL SUMMARY\n")
-            f.write(optimized_data.get("summary", "") + "\n\n")
-            
-            # Work Experience
-            f.write("## WORK EXPERIENCE\n")
-            for job in optimized_data.get("work_experience", []):
-                f.write(f"{job.get('title', '')} - {job.get('company', '')}, {job.get('dates', '')}\n")
-                for resp in job.get("responsibilities", []):
-                    f.write(f"- {resp}\n")
-                f.write("\n")
-            
-            # Skills
-            f.write("## SKILLS\n")
-            skills = optimized_data.get("skills", [])
-            f.write(", ".join(skills) + "\n\n")
-            
-            # Education
-            f.write("## EDUCATION\n")
-            for edu in optimized_data.get("education", []):
-                f.write(f"{edu.get('degree', '')} - {edu.get('institution', '')}, {edu.get('dates', '')}\n")
-                if edu.get("gpa"):
-                    f.write(f"GPA: {edu.get('gpa')}\n")
-                f.write("\n")
-            
-            # Certifications
-            if optimized_data.get("certifications"):
-                f.write("## CERTIFICATIONS\n")
-                for cert in optimized_data.get("certifications", []):
-                    f.write(f"- {cert}\n")
-            
-        print(f"Optimized resume saved to {txt_path}")
-        return txt_path
-    except Exception as e:
-        print(f"Error exporting optimized resume: {e}")
         return None
 
 # --- GUI Functions ---
@@ -583,8 +472,7 @@ def perform_analysis_thread(resume_path, job_description, model):
         }
         analysis_history.append(analysis_entry)
         
-        # Enable the optimize and save buttons
-        root.after(0, lambda: optimize_button.config(state=tk.NORMAL))
+        # Enable the save button
         root.after(0, lambda: save_button.config(state=tk.NORMAL))
         
     except Exception as e:
@@ -595,127 +483,6 @@ def perform_analysis_thread(resume_path, job_description, model):
     finally:
         reset_gui_state()
 
-def optimize_resume_action():
-    """Generate an optimized version of the resume for the current job."""
-    global current_resume_data, selected_resume_path
-    
-    if not current_resume_data:
-        messagebox.showwarning("Data Missing", "Please complete an analysis first.")
-        return
-        
-    job_desc = job_desc_text.get("1.0", tk.END).strip()
-    if not job_desc:
-        messagebox.showwarning("Input Missing", "Please paste the job description.")
-        return
-    
-    # Initialize or get the model
-    model = initialize_api()
-    if not model:
-        return
-    
-    # Update UI to show processing
-    optimize_button.config(state=tk.DISABLED, text="Optimizing...")
-    progress_bar.pack(pady=5)
-    progress_bar.start(10)
-    clear_results()
-    update_results("Optimizing resume for this job description...\n\n")
-    
-    # Start optimization in a separate thread
-    optimize_thread = threading.Thread(
-        target=perform_optimization_thread, 
-        args=(current_resume_data, job_desc, model, selected_resume_path),
-        daemon=True
-    )
-    optimize_thread.start()
-
-def perform_optimization_thread(resume_data, job_description, model, resume_path):
-    """Run the optimization process in a separate thread."""
-    try:
-        # Generate optimized resume
-        update_results("Generating optimized resume...\n")
-        optimized_data = optimize_resume(resume_data, job_description, model)
-        
-        if not optimized_data or "error" in optimized_data:
-            error_msg = optimized_data.get('error', 'Unknown error during optimization.') if optimized_data else "Optimization failed."
-            raw_response = optimized_data.get('raw_response', '') if optimized_data else ""
-            update_results(f"Error during resume optimization:\n{error_msg}\n{raw_response}\nOptimization finished with errors.")
-            reset_gui_state()
-            return
-        
-        # Export optimized resume to file
-        txt_path = export_optimized_resume(optimized_data, resume_path)
-        
-        if not txt_path:
-            update_results("Error: Failed to save optimized resume.\n")
-            reset_gui_state()
-            return
-        
-        # Display success message and path
-        update_results(f"\n--- Optimization Complete ---\n")
-        update_results(f"Optimized resume saved to:\n{txt_path}\n\n")
-        
-        # Show the optimized resume content
-        update_results("--- Optimized Resume Content ---\n\n")
-        
-        # Summary
-        update_results("PROFESSIONAL SUMMARY:\n")
-        update_results(f"{optimized_data.get('summary', '')}\n\n")
-        
-        # Work Experience
-        update_results("WORK EXPERIENCE:\n")
-        for job in optimized_data.get("work_experience", []):
-            update_results(f"{job.get('title', '')} - {job.get('company', '')}, {job.get('dates', '')}\n")
-            for resp in job.get("responsibilities", []):
-                update_results(f"- {resp}\n")
-            update_results("\n")
-        
-        # Skills
-        update_results("SKILLS:\n")
-        skills = optimized_data.get("skills", [])
-        update_results(", ".join(skills) + "\n\n")
-        
-        # Education
-        update_results("EDUCATION:\n")
-        for edu in optimized_data.get("education", []):
-            update_results(f"{edu.get('degree', '')} - {edu.get('institution', '')}, {edu.get('dates', '')}\n")
-            if edu.get("gpa"):
-                update_results(f"GPA: {edu.get('gpa')}\n")
-            update_results("\n")
-        
-        # Certifications
-        if optimized_data.get("certifications"):
-            update_results("CERTIFICATIONS:\n")
-            for cert in optimized_data.get("certifications", []):
-                update_results(f"- {cert}\n")
-        
-        # Offer to open the file
-        if messagebox.askyesno("Optimization Complete", f"Optimized resume saved. Would you like to open it?"):
-            os.startfile(txt_path) if os.name == 'nt' else os.system(f'open "{txt_path}"')
-        
-    except Exception as e:
-        print(f"An unexpected error occurred during optimization thread: {e}")
-        update_results(f"\n--- An Unexpected Error Occurred ---\n{e}\nSee console for more details.")
-        import traceback
-        traceback.print_exc()
-    finally:
-        reset_gui_state()
-
-def save_analysis_action():
-    """Save the current analysis results to a CSV file."""
-    global analysis_history, selected_resume_path
-    
-    if not analysis_history:
-        messagebox.showwarning("No Analysis", "Please complete an analysis first.")
-        return
-    
-    # Use the most recent analysis
-    latest_analysis = analysis_history[-1]
-    job_desc = job_desc_text.get("1.0", tk.END).strip()
-    
-    # Save to CSV
-    # csv_path = save_analysis_to_csv(latest_analysis["analysis_results"], selected_resume_path, job_)
-    
-    
 def save_analysis_action():
     """Save the current analysis results to a CSV file."""
     global analysis_history, selected_resume_path
@@ -759,7 +526,6 @@ def _do_reset_gui_state():
     """Helper function to reset GUI from the main thread."""
     try:
         analyze_button.config(state=tk.NORMAL, text="Analyze Resume vs. Job Description")
-        optimize_button.config(state=tk.DISABLED, text="Optimize Resume for This Job")
         progress_bar.stop()
         progress_bar.pack_forget()
     except tk.TclError as e:
@@ -774,7 +540,6 @@ This application helps you analyze your resume against job descriptions using AI
 Features:
 - Extract text from PDF, DOCX, and TXT resumes
 - Analyze resume against job descriptions
-- Generate optimized resumes for specific jobs
 - Save analysis results for future reference
 
 Powered by Google's Gemini API
@@ -789,13 +554,11 @@ def show_help_dialog():
 2. Paste the job description text
 3. Click "Analyze" to compare your resume to the job
 4. Review the analysis results
-5. Optionally, click "Optimize Resume" to generate an improved version
-6. Save the analysis for your records
+5. Save the analysis for your records
 
 Tips:
 - For best results, use a well-formatted resume
 - Make sure job descriptions contain detailed requirements
-- Consider optimizing your resume for each job application
 """
     messagebox.showinfo("Help", help_text)
 
@@ -913,7 +676,7 @@ job_desc_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 job_desc_text = scrolledtext.ScrolledText(job_desc_frame, wrap=tk.WORD, height=8, borderwidth=1, relief="solid")
 job_desc_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-# Buttons frame
+# Analysis button frame
 buttons_frame = tk.Frame(main_frame)
 buttons_frame.pack(fill=tk.X, pady=(0, 10))
 
@@ -925,28 +688,7 @@ analyze_button = tk.Button(
     fg="white",
     height=2
 )
-analyze_button.pack(side=tk.LEFT, padx=(0, 5), fill=tk.X, expand=True)
-
-optimize_button = tk.Button(
-    buttons_frame, 
-    text="Optimize Resume for This Job", 
-    command=optimize_resume_action,
-    state=tk.DISABLED,
-    bg="#2196F3",
-    fg="white",
-    height=2
-)
-optimize_button.pack(side=tk.LEFT, padx=(5, 0), fill=tk.X, expand=True)
-
-# Save button
-save_button = tk.Button(
-    main_frame,
-    text="Save Analysis Results",
-    command=save_analysis_action,
-    state=tk.DISABLED,
-    bg="#FFC107"
-)
-save_button.pack(fill=tk.X, pady=(0, 10))
+analyze_button.pack(fill=tk.X, expand=True)
 
 # Progress bar (hidden by default)
 progress_bar = ttk.Progressbar(main_frame, mode='indeterminate')
@@ -967,35 +709,14 @@ results_text = scrolledtext.ScrolledText(
 )
 results_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-# Status bar
-status_frame = tk.Frame(root, bd=1, relief=tk.SUNKEN)
-status_frame.pack(side=tk.BOTTOM, fill=tk.X)
-status_label = tk.Label(status_frame, text="Ready", anchor=tk.W, padx=5, pady=2)
-status_label.pack(side=tk.LEFT)
+# Save button at the bottom
+save_button = tk.Button(
+    main_frame,
+    text="Save Analysis Results",
+    command=save_analysis_action,
+    state=tk.DISABLED
+)
+save_button.pack(pady=10)
 
-# --- Main Execution ---
-if __name__ == "__main__":
-    # Check for API key before running
-    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        messagebox.showerror(
-            "Startup Error", 
-            "Google API key not configured. Please add GOOGLE_API_KEY to your .env file."
-        )
-    else:
-        try:
-            # Initialize API to check connectivity
-            model = initialize_api()
-            if not model:
-                raise ValueError("Failed to initialize API")
-                
-            # Update status
-            status_label.config(text="API connected. Ready for analysis.")
-            
-            # Start the main loop
-            root.mainloop()
-        except Exception as e:
-            print(f"Startup error: {e}")
-            messagebox.showerror("Startup Error", f"Could not start application: {e}")
-                                    
-                                    
+# Run the main loop
+root.mainloop()
