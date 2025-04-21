@@ -17,10 +17,18 @@
             });
 
             const result = await response.json();
+            
             document.getElementById("result").innerHTML = `
                 <div class="mt-4 p-4 bg-green-100 text-green-800 rounded-lg shadow">
-                    <p class="font-bold">Match Score: ${result.match_score}</p>
-                    <p>${result.message}</p>
+                    <p class="font-bold text-lg">Match Score: ${result.match_score}</p>
+                    <p class="text-sm">${result.message}</p>
+                    ${result.missing_requirements.length > 0 
+                        ? `<div class="mt-2"><strong>Missing Requirements:</strong>
+                            <ul class="list-disc ml-6 mt-1">
+                                ${result.missing_requirements.map(req => `<li>${req}</li>`).join('')}
+                            </ul>
+                           </div>` 
+                        : `<p class="mt-2 text-green-700">All key requirements found in the resume!</p>`}
                 </div>`;
         }
     </script>

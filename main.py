@@ -2,6 +2,10 @@ from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from text_extractor import extract_text
+from grade_scale import compute_similarity
+from requirements_matcher import compare_requirements
+
 
 app = FastAPI()
 
@@ -26,17 +30,21 @@ async def compare_resume_job(
     resume: UploadFile = File(...),
     job_description: UploadFile = File(...)
 ):
-    resume_text = await resume.read()
-    jd_text = await job_description.read()
+    resume_bytes = await resume.read()
+    jd_bytes = await job_description.read()
 
-    resume_str = resume_text.decode("utf-8", errors="ignore")
-    jd_str = jd_text.decode("utf-8", errors="ignore")
+    resume_str = extract_text(resume_bytes, resume.filename)
+    jd_str = extract_text(jd_bytes, job_description.filename)
 
     resume_words = set(resume_str.lower().split())
     jd_words = set(jd_str.lower().split())
-    match_score = len(resume_words & jd_words) / max(len(jd_words), 1) * 100
+    match_score = compute_similarity(resume_str, jd_str)
+    missing = compare_requirements(jd_str, resume_str)
+
+    #match_score = len(resume_words & jd_words) / max(len(jd_words), 1) * 100
 
     return {
         "match_score": f"{match_score:.2f}%",
+        "missing_requirements": missing,
         "message": "Comparison complete."
     }
