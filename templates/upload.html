@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Resume vs Job Description</title>
+    <title>AI Resume Analyzer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         async function submitForm(event) {
@@ -11,130 +11,81 @@
             const form = document.getElementById("upload-form");
             const formData = new FormData(form);
 
-            const response = await fetch("/compare/", {
+            const response = await fetch("/analyze/", {
                 method: "POST",
                 body: formData
             });
 
             const result = await response.json();
-            
-            document.getElementById("result").innerHTML = `
-                <div class="mt-4 p-4 bg-green-100 text-green-800 rounded-lg shadow">
-                    <p class="font-bold text-lg">Match Score: ${result.match_score}</p>
-                    <p class="text-sm">${result.message}</p>
-                    ${result.missing_requirements.length > 0 
-                        ? `<div class="mt-2"><strong>Missing Requirements:</strong>
-                            <ul class="list-disc ml-6 mt-1">
-                                ${result.missing_requirements.map(req => `<li>${req}</li>`).join('')}
-                            </ul>
-                           </div>` 
-                        : `<p class="mt-2 text-green-700">All key requirements found in the resume!</p>`}
-                </div>`;
+            const resultContainer = document.getElementById("result");
+
+            if (result.error) {
+                resultContainer.innerHTML = `
+                    <div class="p-4 bg-red-100 text-red-700 rounded">
+                        <p class="font-bold">Error:</p>
+                        <p>${result.error}</p>
+                        <pre class="mt-2 text-xs">${result.raw || ''}</pre>
+                    </div>`;
+                return;
+            }
+
+            resultContainer.innerHTML = `
+                <div class="p-4 bg-green-100 text-green-900 rounded shadow">
+                    <p class="text-lg font-bold">Match Score: ${result.match_score}/100</p>
+                    <p class="italic mt-1">${result.summary}</p>
+
+                    <div class="mt-3">
+                        <h3 class="font-semibold">Strengths:</h3>
+                        <ul class="list-disc ml-6">
+                            ${result.strengths.map(s => `<li>${s}</li>`).join("")}
+                        </ul>
+                    </div>
+
+                    <div class="mt-3">
+                        <h3 class="font-semibold">Areas for Improvement:</h3>
+                        <ul class="list-disc ml-6">
+                            ${result.weaknesses.map(w => `<li>${w}</li>`).join("")}
+                        </ul>
+                    </div>
+
+                    <div class="mt-3">
+                        <h3 class="font-semibold">Missing Skills:</h3>
+                        <ul class="list-disc ml-6">
+                            ${result.missing_skills.map(m => `<li>${m}</li>`).join("")}
+                        </ul>
+                    </div>
+
+                    <div class="mt-3">
+                        <h3 class="font-semibold">Recommendations:</h3>
+                        <ul class="list-disc ml-6">
+                            ${result.recommendations.map(r => `<li>${r}</li>`).join("")}
+                        </ul>
+                    </div>
+                </div>
+            `;
         }
     </script>
-    
-<!-- 
-  Starry background overlay with twinkling animation
--->
-<style>
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-  
-      /* Repeating star texture pattern */
-      background: transparent url('https://www.transparenttextures.com/patterns/stardust.png') repeat;
-  
-      opacity: 0.3;             /* Subtle visibility */
-      z-index: 0;               /* Send it to the very back */
-      pointer-events: none;     /* Don't block user interaction */
-      animation: twinkle 20s linear infinite;  /* Move background slowly for a starry effect */
-    }
-  
-    /* Animate background to simulate twinkling stars */
-    @keyframes twinkle {
-      0% { background-position: 0 0; }
-      100% { background-position: 1000px 1000px; }
-    }
-  </style>
-  
-  <!-- 
-    Main page content with full-screen galaxy background 
-  -->
-  <body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-black text-white relative z-10">
-  
-    <!-- 
-      Centered glass-effect card for file upload form 
-    -->
-    <div class="bg-white bg-opacity-10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl w-full max-w-md z-20">
-  
-      <!-- Page heading -->
-      <h2 class="text-3xl font-extrabold mb-6 text-center text-white">🌌 Resume Match Checker</h2>
-  
-      <!-- Upload form for resume and job description -->
-      <form id="upload-form" onsubmit="submitForm(event)" enctype="multipart/form-data" class="space-y-4">
-  
-        <!-- Resume input field -->
-        <div>
-          <label class="block text-sm font-medium text-gray-200">Upload Resume:</label>
-          <input 
-            type="file" 
-            name="resume" 
-            accept=".txt,.pdf,.docx" 
-            required 
-            class="mt-1 block w-full bg-gray-900 text-white border border-gray-700 rounded-md shadow-sm p-2"
-          >
-        </div>
-  
-        <!-- Job description input field -->
-        <div>
-          <label class="block text-sm font-medium text-gray-200">Upload Job Description:</label>
-          <input 
-            type="file" 
-            name="job_description" 
-            accept=".txt,.pdf,.docx" 
-            required 
-            class="mt-1 block w-full bg-gray-900 text-white border border-gray-700 rounded-md shadow-sm p-2"
-          >
-        </div>
-  
-        <!-- Submit button -->
-        <button type="submit" class="w-full bg-purple-700 hover:bg-purple-800 text-white font-semibold py-2 px-4 rounded-lg">
-          Compare
-        </button>
-      </form>
-  
-      <!-- Placeholder for result display after form submission -->
-      <div id="result" class="mt-6 text-sm"></div>
-    </div>
-  </body>
-</html>
-
-<!--
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
-    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h2 class="text-2xl font-bold mb-6 text-center">Resume Match Checker</h2>
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-2xl">
+        <h1 class="text-2xl font-bold mb-6 text-center">Resume Analyzer</h1>
         <form id="upload-form" onsubmit="submitForm(event)" enctype="multipart/form-data" class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700">Upload Resume:</label>
-                <input type="file" name="resume" accept=".txt,.pdf,.docx" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                <label class="block font-medium">Upload Resume:</label>
+                <input type="file" name="resume" required accept=".txt,.pdf,.docx"
+                       class="w-full mt-1 border rounded p-2" />
             </div>
-
             <div>
-                <label class="block text-sm font-medium text-gray-700">Upload Job Description:</label>
-                <input type="file" name="job_description" accept=".txt,.pdf,.docx" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                <label class="block font-medium">Upload Job Description:</label>
+                <input type="file" name="job_description" required accept=".txt,.pdf,.docx"
+                       class="w-full mt-1 border rounded p-2" />
             </div>
-
-            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded">
-                Compare
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
+                Analyze Resume
             </button>
         </form>
 
-        <div id="result" class="mt-6 text-sm"></div>
+        <div id="result" class="mt-6"></div>
     </div>
 </body>
 </html>
--->
-

@@ -2,31 +2,27 @@ from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from text_extractor import extract_text
-from grade_scale import compute_similarity
-from requirements_matcher import compare_requirements
-
+from text_extract import extract_text
+from gemini_analyzer import initialize_api, extract_resume_info, analyze_resume_against_job
+import json
 
 app = FastAPI()
 
-# Enable CORS (for frontend to make requests to backend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 templates = Jinja2Templates(directory="templates")
 
-# Serve the upload form on the root path
 @app.get("/", response_class=HTMLResponse)
 async def upload_form(request: Request):
     return templates.TemplateResponse("upload.html", {"request": request})
 
-# Process uploaded resume and job description files
-@app.post("/compare/")
-async def compare_resume_job(
+@app.post("/analyze/")
+async def analyze_resume(
     resume: UploadFile = File(...),
     job_description: UploadFile = File(...)
 ):
@@ -36,15 +32,10 @@ async def compare_resume_job(
     resume_str = extract_text(resume_bytes, resume.filename)
     jd_str = extract_text(jd_bytes, job_description.filename)
 
-    resume_words = set(resume_str.lower().split())
-    jd_words = set(jd_str.lower().split())
-    match_score = compute_similarity(resume_str, jd_str)
-    missing = compare_requirements(jd_str, resume_str)
+    model = initialize_api()
+    resume_data = extract_resume_info(resume_str, model)
+    if not resume_data or "error" in resume_data:
+        return {"error": "Resume analysis failed.", "raw": resume_data.get("raw_response", "")}
 
-    #match_score = len(resume_words & jd_words) / max(len(jd_words), 1) * 100
-
-    return {
-        "match_score": f"{match_score:.2f}%",
-        "missing_requirements": missing,
-        "message": "Comparison complete."
-    }
+    analysis = analyze_resume_against_job(resume_data, jd_str, model)
+    return analysis
